@@ -42,11 +42,12 @@ NULL
 #' @param data A data frame in long format containing the data for which events
 #'   is to be detected. This means that each measurement corresponds to a row
 #'   and the columns are (in order): source (the device or person from which the
-#'   data was collected), point in time,
-#'   measurement value, lower detection bound, and upper detection bound.
+#'   data was collected), point in time, and
+#'   measurement value. If custom detection bounds are chosen, the folloing two
+#'   columns must be added: lower detection bound, and upper detection bound.
 #'
 #'   The source is expected to
-#'   be a string; the time point, measurements, and detection bounds are expected to be numerical.
+#'   be a string; the time point are integers; measurements, and detection bounds are expected to be numerical.
 #'   The detection bounds are in absolute value in the same unit as the
 #'   values and each is expected to be identical for the same source.
 #'
@@ -73,9 +74,23 @@ NULL
 #'   is desired, \code{conf_band_lvl} can be chosen to be 0.
 #' @param time_unit A string containing the unit of time used, in singular form.
 #'   Defaults to day.
+#' @param detect A string specifying how the detection bounds are to be chosen.
+#'   \code{below}, \code{above}, and \code{custom} can be chosen. \code{below}
+#'   detects decreases in value, \code{above} detects increases in value, and
+#'   \code{custom} can be used to manually add detection bounds for each subject.
+#'   When \code{above} or \code{below} are used, the detection bound will be x percent
+#'   above or below the median of the first y days, where x is \code{detect_factor}
+#'   and y is \code{detect period}.
+#' @param detect_factor A number specifying the factor by which the median of
+#'   the fist \code{bline_period} days is to be multiplied to obtain the
+#'   detection bounds. E.g. 0.9 sets the detection bound 10 percent below the
+#'   said median.
+#' @param bline_period A number specifying the number of time units from which
+#'   data should be taken to calculate the median to obtain the detection bounds.
 #' @param ... Additional parameters to be given to the function. Possible
 #'   parameters for the model are \code{order} and \code{min_pts_in_win}. For
-#'   the moving median, a \code{med_win} is required.
+#'   the moving median, a \code{med_win} is required. When resampling from
+#'   window, a \code{resample_win} may be given.
 #'
 #'   The parameter \code{min_pts_in_win}
 #'   defines the minimal number of
@@ -89,6 +104,9 @@ NULL
 #'   When the moving
 #'   median is used as the smoother, \code{med_win} is expected. If no \code{med_win} is
 #'   given, it will default to \code{c(-42, 42)}.
+#'
+#'   When resampling from window, one can choose the window size for the
+#'   resampling window with \code{resample_win} by giving a window like e.g. \code{c(-14,14)}..
 #'
 #'
 #' @details
@@ -121,6 +139,11 @@ NULL
 #' that the confidence bounds don't change in case we obtain new measurements
 #' with time points later than the latest time point at which we have a measurement.
 #'
+#' The \code{edecob} function runs the functions \code{mov_med}, \code{smoother_resid},
+#' \code{bt_smoother}, \code{conf_band}, and \code{detect_event} in this order
+#' for all subjects given. If desired, the functions can also manually be
+#' applied for the data to obtain e.g. the confidence bands. Note that in order
+#' to run one of these functions, the output of the previous functions are needed.
 #'
 #' @return If \code{data} contains only a single source, the function returns
 #'   a list of 13 variables: \describe{
@@ -242,35 +265,30 @@ NULL
 #' library(edecob)
 #'
 #' # Let us examine the example_data dataset
-#' head(example_data)
-#' #>     subject study_day jump_height detect_lower detect_upper
-#' #> 1 Subject 1         1    55.60844         -Inf     54.41227
-#' #> 2 Subject 1         4    57.77688         -Inf     54.41227
-#' #> 3 Subject 1         7    57.59584         -Inf     54.41227
-#' #> 4 Subject 1        10    59.92832         -Inf     54.41227
-#' #> 5 Subject 1        13    53.33169         -Inf     54.41227
-#' #> 6 Subject 1        16    60.17763         -Inf     54.41227
+#' head(example_data, 3)
+#' #>     subject study_day jump_height
+#' #> 1 Subject 1         1    55.60844
+#' #> 2 Subject 1         4    57.77688
+#' #> 3 Subject 1         7    57.59584
 #'
 #' # We apply the main fuction of the package onto our example_data
-#' example_event <- edecob(example_data, med_win = c(-21,21), bt_tot_rep = 40,
-#'                         min_change_dur = 50)
-#' #> Warning in edecob(example_data, med_win = c(-21, 21), bt_tot_rep = 40,
-#' #> min_change_dur = 50) :
+#' example_event <- edecob(example_data, med_win = c(-21,21), bt_tot_rep = 10,
+#'                         min_change_dur = 70)
+#' #> Warning in edecob(example_data, med_win = c(-21, 21), bt_tot_rep = 10,
+#' #> min_change_dur = 70) :
 #' #>   Removing rows where value is NA
 #' names(example_event)
-#' #> [1] "Subject 1"  "Subject 2"  "Subject 3"  "event_info"
+#' #> [1] "Subject 1"  "Subject 2"  "event_info"
 #'
 #' # example_event contains the event data for each source
 #' plot(example_event$`Subject 1`)
 #' plot(example_event$`Subject 2`)
-#' plot(example_event$`Subject 3`)
 #'
 #' # example_event also contains a data frame containing the event information for all patients
 #' example_event$event_info
 #' #>           event_detected event_onset event_duration event_stop
-#' #> Subject 1           TRUE         169             87       TRUE
-#' #> Subject 2           TRUE         205             51       TRUE
-#' #> Subject 3          FALSE         306             38      FALSE
+#' #> Subject 1           TRUE         115            138       TRUE
+#' #> Subject 2          FALSE         306             68      FALSE
 #'
 #' # Using this data frame, we can draw a survival plot
 #' library("survival")
@@ -285,43 +303,62 @@ edecob <- function(data,
                    conf_band_lvl = 0.95,
                    bt_tot_rep = 100,
                    time_unit = "day",
+                   detect = "below",
+                   detect_factor = 1,
+                   bline_period = 14,
                    ...) {
 
   data_raw <- data
 
   if (!("col_names" %in% names(match.call()))) {
     col_names <- colnames(data)
-    colnames(data) <- c("source", "time_point", "value", "detec_lower", "detec_upper")
+    if (detect == "custom"){
+      colnames(data) <- c("source", "time_point", "value", "detec_lower", "detec_upper")
+    } else {
+      colnames(data) <- c("source", "time_point", "value")
+    }
+
   } else {
     col_names <- list(...)$col_names
   }
 
-  data <- data.frame("source" = unlist(data$source),
-                     "time_point" = unlist(data$time_point),
-                     "value" = unlist(data$value),
-                     "detec_lower" = unlist(data$detec_lower),
-                     "detec_upper" = unlist(data$detec_upper))
+  if (detect == "custom"){
+    data <- data.frame("source" = unlist(data$source),
+                       "time_point" = unlist(data$time_point),
+                       "value" = unlist(data$value),
+                       "detec_lower" = unlist(data$detec_lower),
+                       "detec_upper" = unlist(data$detec_upper))
+  } else {
+    data <- data.frame("source" = unlist(data$source),
+                       "time_point" = unlist(data$time_point),
+                       "value" = unlist(data$value))
+  }
 
   stopifnot(
     "Data not a data frame" = is.data.frame(data),
     "Data empty" = nrow(data) > 0,
     "Time points not numeric" = is.numeric(data[,2]),
-    "Measurements not numeric" = is.numeric(data[,3]),
-    "Upper bound of detection interval not numeric" = is.numeric(data[,5]),
-    "Lower bound of detection interval not numeric" = is.numeric(data[,4]),
-    "Upper bound of detection interval not all equal for at least one source" = {
-      all(do.call(c, lapply(unique(data$source), function(x){
-        return(length(unique(data$detec_upper[data$source == x])) == 1)
-      })))},
-    "Lower bound of detection interval not all equal for at least one source" = {
-      all(do.call(c, lapply(unique(data$source), function(x){
-        return(length(unique(data$detec_lower[data$source == x])) == 1)
-      })))},
-    "Upper bound of detection interval contains NA values" = sum(is.na(data[,5])) == 0,
-    "Lower bound of detection interval contains NA values" = sum(is.na(data[,4])) == 0,
-    "Lower bound of detection interval is larger than upper bound of detection interval for at least one source" = sum(data[,4] > data[,5]) == 0,
-    "Lower bound of detection interval is equal to upper bound of detection interval for at least one source" = sum(data[,4] == data[,5]) == 0
+    "Measurements not numeric" = is.numeric(data[,3])
   )
+
+  if (detect == "custom") {
+    stopifnot(
+      "Upper bound of detection interval not numeric" = is.numeric(data[,5]),
+      "Lower bound of detection interval not numeric" = is.numeric(data[,4]),
+      "Upper bound of detection interval not all equal for at least one source" = {
+        all(do.call(c, lapply(unique(data$source), function(x){
+          return(length(unique(data$detec_upper[data$source == x])) == 1)
+        })))},
+      "Lower bound of detection interval not all equal for at least one source" = {
+        all(do.call(c, lapply(unique(data$source), function(x){
+          return(length(unique(data$detec_lower[data$source == x])) == 1)
+        })))},
+      "Upper bound of detection interval contains NA values" = sum(is.na(data[,5])) == 0,
+      "Lower bound of detection interval contains NA values" = sum(is.na(data[,4])) == 0,
+      "Lower bound of detection interval is larger than upper bound of detection interval for at least one source" = sum(data[,4] > data[,5]) == 0,
+      "Lower bound of detection interval is equal to upper bound of detection interval for at least one source" = sum(data[,4] == data[,5]) == 0
+    )
+  }
 
   if ("med_win" %in% names(list(...))) {
     stopifnot("Window of the moving median does not contain two numbers" = (length(list(...)$med_win) == 2),
@@ -337,12 +374,16 @@ edecob <- function(data,
     warning("Removing rows where time point is NA", immediate. = TRUE)
     data <- data[!is.na(data$time_point), ]
   }
+  if (!all(data[,2] == floor(data[,2]))) {
+    warning("Time points not integer. Rounding time points down to closest integer.", immediate. = TRUE)
+    data[,2] <- floor(data[,2])
+  }
 
 
 
   # making sure that width is not repeated in future function calls
   no_width_given <- FALSE
-  if ((smoother == "mov_med" || smoother == "mov_mean") && !("med_win" %in% names(list(...)))) {
+  if (!("med_win" %in% names(list(...)))) { # (smoother == "mov_med" || smoother == "mov_mean") &&
     warning("Parameter med_win not given after choosing the moving median as smoother. Defaulting to c(-42,42)", immediate. = TRUE)
     med_win <- c(-42, 42)
     no_width_given <- TRUE
@@ -356,11 +397,14 @@ edecob <- function(data,
     patients_event_data <-
       lapply(split(data, factor(data$source)), edecob,
              smoother, resample_method, min_change_dur,conf_band_lvl,
-             bt_tot_rep, time_unit, "col_names" = col_names, ...)
+             bt_tot_rep, time_unit, detect, detect_factor, bline_period,
+             "col_names" = col_names, "med_win" = med_win, ...)
     patients_event_data$event_info <- as.data.frame(do.call(rbind,
       lapply(patients_event_data, function(x) {
         return(list(x$event$source, x$event$event_detected, x$event$event_onset, x$event$event_duration, x$event$event_stop))
       })))
+    patients_event_data$event_info$source <- row.names(patients_event_data$event_info)
+    patients_event_data$event_info <- patients_event_data$event_info[,c(6, 2:5)]
     colnames(patients_event_data$event_info) <-
       c("source", "event_detected", "event_onset", "event_duration", "event_stop")
     patients_event_data$event_info$source <- unlist(patients_event_data$event_info$source)
@@ -372,6 +416,21 @@ edecob <- function(data,
   }
 
   data <- data[order(data$time_point), ]
+
+  # calculate the upper and lower detection bounds if needed
+  if (detect == "custom") {
+    detection_bound_lower <- data$detec_lower[1]
+    detection_bound_upper <- data$detec_upper[1]
+  } else if (detect == "below") {
+    detection_bound_lower <- -Inf
+    bound_data <- data$value[data$time_point <= data$time_point[1] + bline_period]
+    detection_bound_upper <- stats::median(bound_data)*detect_factor
+  } else if (detect == "above") {
+    detection_bound_upper <- Inf
+    bound_data <- data$value[data$time_point <= data$time_point[1] + bline_period]
+    detection_bound_lower <- stats::median(bound_data)*detect_factor
+  }
+
 
   # calculate the smoother
   if (smoother == "mov_med") {
@@ -409,10 +468,10 @@ edecob <- function(data,
   conf_band <- conf_band(bt_smoother, smoother_pts, bt_tot_rep, conf_band_lvl)
 
   # detect events using confidence bands
-  event <- detect_event(conf_band, data$detec_lower[1], data$detec_upper[1], min_change_dur)
+  event <- detect_event(conf_band, detection_bound_lower, detection_bound_upper, min_change_dur)
 
   # add columns with event information to data
-  colnames(data_raw) <- colnames(data) <- c("source", "time_point", "value", "detec_lower", "detec_upper")
+  colnames(data_raw) <- colnames(data) #<- c("source", "time_point", "value", "detec_lower", "detec_upper")
   data_raw$event <- event$event_detected
   data_raw$event_onset <- event$event_onset
   data_raw$event_duration <- event$event_duration
@@ -427,8 +486,8 @@ edecob <- function(data,
     "data" = data_raw,
     "smoother" = smoother,
     "resample_method" = resample_method,
-    "detec_lower" = data$detec_lower[1],
-    "detec_upper" = data$detec_upper[1],
+    "detec_lower" = detection_bound_lower,
+    "detec_upper" = detection_bound_upper,
     "min_change_dur" = min_change_dur,
     "conf_band_lvl" = conf_band_lvl,
     "bt_tot_rep" = bt_tot_rep,
