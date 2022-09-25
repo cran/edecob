@@ -1,10 +1,10 @@
-5c1f797ccf490b6d9642b53889abc693 *DESCRIPTION
+9daeec7b43ff9efd6c2ac0d99228ccf4 *DESCRIPTION
 bc993504a8b011d51f47c44181dd84c6 *LICENSE
 416e00ac0acc553a6355f515228f5956 *NAMESPACE
 9813a633d728345b328bba2211f408be *R/bt_smoother.R
 f3229fb83b794a866b3d5518794b2dcc *R/conf_band.R
 4611b51db582467242f80436835e63fa *R/detect_event.R
-39c7b37a7a0c4721f9902a60cf12e532 *R/edecob.R
+0e134714e40e8809a44c98f260ce932d *R/edecob.R
 c3928ac032658581b39dc9c6c5521786 *R/example_data.R
 08e74bbfb2673be51435512b44de2b23 *R/mov_med.R
 fda06e3008ee31d4f5455cf89e6fc809 *R/plot.R
@@ -12,10 +12,10 @@ b6fbaffbae1128b502bd08661d1e963e *R/smoother_resid.R
 f663eeaab55cfc1a9d29312f1a943dd3 *R/summary.R
 ac660c1c9adc60e7f18cac967a52c1bc *README.md
 4c394360b7ad533daad7fb79e9bfde0e *data/example_data.rda
-95587a1009c87227d1e0b397dbed8244 *man/bt_smoother.Rd
+2abfcdc31b17c441425573744464eda3 *man/bt_smoother.Rd
 e607cad5f1c9855b1e61759f11b27871 *man/conf_band.Rd
-297e308f1c5671d4d2cf52c3a02169ec *man/detect_event.Rd
-d06d3469c9954141bc4207a79b41ad09 *man/edecob.Rd
+ba627927b0475b32ea90c5e0ed5c5d7b *man/detect_event.Rd
+ae3016908e90e03d3755282d6e2271bd *man/edecob.Rd
 400a29c6cc30bddcc147e9a4bac74da2 *man/example_data.Rd
 d199944fe1205a59b976fb80523e188a *man/mov_med.Rd
 1d77e47ab7dc9573fb3a6601bc9e84d4 *man/plot.edecob.Rd

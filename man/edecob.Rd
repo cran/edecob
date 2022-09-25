@@ -44,10 +44,10 @@ to be taken. Defaults to the moving median.}
 autoregression for the bootstrap. Default is \code{all}, meaning that the epsilon of a
 certain time point are resampled from all time points. \code{past} only
 considers epsilon corresponding to a time point prior to the one being
-resampled. \code{window} resamples the epsilon from the window from which
-the moving median is taken.}
+resampled. \code{window} resamples the epsilon from the window given by
+\code{resample_win}.}
 
-\item{min_change_dur}{The minimal number of days that the confidence bounds
+\item{min_change_dur}{The minimal number of time units that the confidence bounds
 need to stay inside the detection bounds in order for an event to be
 detected. Defaults to 84, i.e. 12 weeks.}
 
@@ -99,8 +99,10 @@ When resampling from window, one can choose the window size for the
 resampling window with \code{resample_win} by giving a window like e.g. \code{c(-14,14)}..}
 }
 \value{
-If \code{data} contains only a single source, the function returns
-a list of 13 variables: \describe{
+The output \code{data} is a list containing as many elements as
+the number of sources in \code{data} plus one. Every element in this list
+will again be a list named after the corresponding sources. Each of
+these lists contains the following elements: \describe{
 \item{\code{event}}{gives a list with four values: \code{event_detected},
 \code{event_onset}, \code{event_duration}, and \code{event_stop}.
 \describe{\item{\code{event_detected}}{gives
@@ -133,14 +135,11 @@ the confidence bounds must stay within the detection bounds in order for an even
 \item{\code{call}}{gives the function call.}
 \item{\code{col_names}}{gives the original column names of the data.}
 \item{\code{time_unit}}{gives the unit of time used.}}
-If \code{data} contains more than one source, the output will be a list
-with one more element than the number of sources in \code{data}. Every
-element in this list will again be a list named after the corresponding sources
-with 13 items as described above except for the last one. The last element
-in the list is called \code{event_info} and is a data frame containing the
-information from \code{event} from each patient. \code{event_info} will thus
-have the following columns: \code{source}, \code{event_detected},
-\code{event_onset}, \code{event_duration}, and \code{event_stop}.
+The last element in the output \code{data} is called \code{event_info} and
+is a data frame containing the information from \code{event} from each
+patient. \code{event_info} will thus have the following columns:
+\code{source}, \code{event_detected}, \code{event_onset},
+\code{event_duration}, and \code{event_stop}.
 }
 \description{
 Calculate a smoother of longitudinal data of the same measure and bootstrap the errors of the autoregressive
