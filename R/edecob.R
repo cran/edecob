@@ -266,16 +266,13 @@ NULL
 #' # Let us examine the example_data dataset
 #' head(example_data, 3)
 #' #>     subject study_day jump_height
-#' #> 1 Subject 1         1    55.60844
-#' #> 2 Subject 1         4    57.77688
-#' #> 3 Subject 1         7    57.59584
+#' #> 1 Subject 1         1    58.13024
+#' #> 2 Subject 1         5    59.48988
+#' #> 3 Subject 1         9    54.14774
 #'
 #' # We apply the main fuction of the package onto our example_data
 #' example_event <- edecob(example_data, med_win = c(-21,21), bt_tot_rep = 10,
 #'                         min_change_dur = 70)
-#' #> Warning in edecob(example_data, med_win = c(-21, 21), bt_tot_rep = 10,
-#' #> min_change_dur = 70) :
-#' #>   Removing rows where value is NA
 #' names(example_event)
 #' #> [1] "Subject 1"  "Subject 2"  "event_info"
 #'
@@ -286,15 +283,15 @@ NULL
 #' # example_event also contains a data frame containing the event information for all patients
 #' example_event$event_info
 #' #>           event_detected event_onset event_duration event_stop
-#' #> Subject 1           TRUE         115            138       TRUE
-#' #> Subject 2          FALSE         306             68      FALSE
+#' #> Subject 1           TRUE         119            134       TRUE
+#' #> Subject 2          FALSE         306             60      FALSE
 #'
 #' # Using this data frame, we can draw a survival plot
 #' library("survival")
 #' plot(survfit(Surv(time = event_onset, event = event_detected) ~ 1,
 #'              data = example_event$event_info),
 #'      conf.int = FALSE, xlim = c(0,350), ylim = c(0,1), mark.time = TRUE,
-#'      xlab = "Study Day", ylab = "Survival Probability", main = "Survival plot")
+#'      xlab = "Time point", ylab = "Survival probability", main = "Survival plot")
 ##
 edecob <- function(data,
                    smoother = "mov_med",

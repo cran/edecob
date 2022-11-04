@@ -1,6 +1,6 @@
 Package: edecob
 Title: Event Detection Using Confidence Bounds
-Version: 1.2.1
+Version: 1.2.2
 Authors@R: 
     person(given = "Zheng Chen",
            family = "Man",
@@ -19,8 +19,8 @@ Imports: stats (>= 3.5.0), ggplot2 (>= 3.1.0), rlang (>= 0.4.0), utils
         (>= 3.5.0), graphics (>= 3.5.0)
 Suggests: survival (>= 2.43)
 NeedsCompilation: no
-Packaged: 2022-10-25 08:08:27 UTC; ZCM
+Packaged: 2022-11-04 11:29:00 UTC; ZCM
 Author: Zheng Chen Man [aut, cre]
 Maintainer: Zheng Chen Man <zheng.chen.man@alumni.ethz.ch>
 Repository: CRAN
-Date/Publication: 2022-10-25 08:25:07 UTC
+Date/Publication: 2022-11-04 12:00:02 UTC
